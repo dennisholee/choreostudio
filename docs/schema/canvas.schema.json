@@ -1,0 +1,384 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/dennisholee/choreostudio/docs/schema/canvas.schema.json",
+  "title": "ChoreoStudio Canvas",
+  "description": "Public schema for a ChoreoStudio Event Storming canvas file (v0.1.0). This is the sole persistence format — committed to Git as a single JSON or YAML file per canvas.",
+  "version": "0.1.0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "id",
+    "slug",
+    "name",
+    "workspaceId",
+    "teamId",
+    "orgId",
+    "lifecycleState",
+    "elements",
+    "connections",
+    "serviceBoundaries",
+    "annotations"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "type": "string",
+      "const": "0.1.0",
+      "x-merge-class": "semantic"
+    },
+    "id": {
+      "type": "string",
+      "description": "Stable UUID for this canvas",
+      "x-merge-class": "semantic"
+    },
+    "slug": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+      "description": "URL-safe identifier used in Git branch name: choreostudio/drafts/<slug>",
+      "x-merge-class": "semantic"
+    },
+    "name": {
+      "type": "string",
+      "description": "[semantic] Human-readable canvas name",
+      "x-merge-class": "semantic"
+    },
+    "workspaceId": {
+      "type": "string",
+      "x-merge-class": "semantic"
+    },
+    "teamId": {
+      "type": "string",
+      "x-merge-class": "semantic"
+    },
+    "orgId": {
+      "type": "string",
+      "x-merge-class": "semantic"
+    },
+    "lifecycleState": {
+      "type": "string",
+      "enum": ["draft", "inReview", "approved", "conflict"],
+      "description": "[semantic] Current lifecycle state. 'conflict' means post-merge structural validation failed; compilation suspended.",
+      "x-merge-class": "semantic"
+    },
+    "elements": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/Element"
+      },
+      "x-merge-class": "semantic"
+    },
+    "connections": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/Connection"
+      },
+      "x-merge-class": "semantic"
+    },
+    "serviceBoundaries": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/ServiceBoundary"
+      },
+      "x-merge-class": "semantic"
+    },
+    "annotations": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/Annotation"
+      },
+      "x-merge-class": "semantic"
+    },
+    "createdAt": {
+      "type": "string",
+      "format": "date-time",
+      "x-merge-class": "semantic"
+    },
+    "updatedAt": {
+      "type": "string",
+      "format": "date-time",
+      "x-merge-class": "semantic"
+    }
+  },
+  "definitions": {
+    "Element": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "type", "name", "position"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Stable element UUID — never reused after deletion",
+          "x-merge-class": "semantic"
+        },
+        "type": {
+          "type": "string",
+          "enum": ["domainEvent", "command", "policy", "aggregate", "readModel"],
+          "description": "[semantic] Element type. Determines palette colour and allowed connection directions.",
+          "x-merge-class": "semantic"
+        },
+        "name": {
+          "type": "string",
+          "x-merge-class": "semantic"
+        },
+        "deprecated": {
+          "type": "boolean",
+          "default": false,
+          "x-merge-class": "semantic"
+        },
+        "transport": {
+          "type": "string",
+          "enum": ["REST", "Async"],
+          "description": "[semantic] Required for 'command' type. Determines whether element compiles to OpenAPI (REST) or AsyncAPI (Async).",
+          "x-merge-class": "semantic"
+        },
+        "payloadSchema": {
+          "type": "object",
+          "description": "[semantic] Inline JSON Schema for this element's payload.",
+          "x-merge-class": "semantic"
+        },
+        "serviceBoundaryId": {
+          "type": "string",
+          "description": "[semantic] ID of the ServiceBoundary this element belongs to.",
+          "x-merge-class": "semantic"
+        },
+        "validationState": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "structural": {
+              "type": "string",
+              "enum": ["valid", "invalid"],
+              "x-merge-class": "semantic"
+            },
+            "semantic": {
+              "type": "string",
+              "enum": ["valid", "warning"],
+              "x-merge-class": "semantic"
+            },
+            "messages": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "x-merge-class": "semantic"
+              },
+              "x-merge-class": "semantic"
+            }
+          },
+          "x-merge-class": "semantic"
+        },
+        "position": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["x", "y"],
+          "properties": {
+            "x": {
+              "type": "number",
+              "x-merge-class": "cosmetic"
+            },
+            "y": {
+              "type": "number",
+              "x-merge-class": "cosmetic"
+            }
+          },
+          "x-merge-class": "cosmetic"
+        },
+        "size": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "width": {
+              "type": "number",
+              "x-merge-class": "cosmetic"
+            },
+            "height": {
+              "type": "number",
+              "x-merge-class": "cosmetic"
+            }
+          },
+          "x-merge-class": "cosmetic"
+        },
+        "style": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "color": {
+              "type": "string",
+              "description": "Hex colour — enforced by element type",
+              "x-merge-class": "cosmetic"
+            },
+            "collapsed": {
+              "type": "boolean",
+              "default": false,
+              "x-merge-class": "cosmetic"
+            },
+            "zIndex": {
+              "type": "integer",
+              "x-merge-class": "cosmetic"
+            }
+          },
+          "x-merge-class": "cosmetic"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "command"
+              }
+            },
+            "required": ["type"]
+          },
+          "then": {
+            "required": ["transport"]
+          }
+        }
+      ]
+    },
+    "Connection": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "sourceId", "targetId", "direction"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "x-merge-class": "semantic"
+        },
+        "sourceId": {
+          "type": "string",
+          "x-merge-class": "semantic"
+        },
+        "targetId": {
+          "type": "string",
+          "x-merge-class": "semantic"
+        },
+        "direction": {
+          "type": "string",
+          "enum": ["sourceToTarget", "targetToSource", "bidirectional"],
+          "x-merge-class": "semantic"
+        },
+        "label": {
+          "type": "string",
+          "x-merge-class": "semantic"
+        },
+        "waypoints": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "x": {
+                "type": "number",
+                "x-merge-class": "cosmetic"
+              },
+              "y": {
+                "type": "number",
+                "x-merge-class": "cosmetic"
+              }
+            },
+            "x-merge-class": "cosmetic"
+          },
+          "description": "Visual routing points — cosmetic only",
+          "x-merge-class": "cosmetic"
+        }
+      }
+    },
+    "ServiceBoundary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "x-merge-class": "semantic"
+        },
+        "name": {
+          "type": "string",
+          "x-merge-class": "semantic"
+        },
+        "description": {
+          "type": "string",
+          "x-merge-class": "semantic"
+        },
+        "boundingBox": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "x": {
+              "type": "number",
+              "x-merge-class": "cosmetic"
+            },
+            "y": {
+              "type": "number",
+              "x-merge-class": "cosmetic"
+            },
+            "width": {
+              "type": "number",
+              "x-merge-class": "cosmetic"
+            },
+            "height": {
+              "type": "number",
+              "x-merge-class": "cosmetic"
+            }
+          },
+          "x-merge-class": "cosmetic"
+        }
+      }
+    },
+    "Annotation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "elementId", "thread"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "x-merge-class": "semantic"
+        },
+        "elementId": {
+          "type": "string",
+          "description": "ID of the element this annotation belongs to",
+          "x-merge-class": "semantic"
+        },
+        "resolved": {
+          "type": "boolean",
+          "default": false,
+          "x-merge-class": "semantic"
+        },
+        "thread": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "authorId", "body", "createdAt"],
+            "properties": {
+              "id": {
+                "type": "string",
+                "x-merge-class": "semantic"
+              },
+              "parentId": {
+                "type": "string",
+                "description": "For threaded replies",
+                "x-merge-class": "semantic"
+              },
+              "authorId": {
+                "type": "string",
+                "x-merge-class": "semantic"
+              },
+              "body": {
+                "type": "string",
+                "x-merge-class": "semantic"
+              },
+              "createdAt": {
+                "type": "string",
+                "format": "date-time",
+                "x-merge-class": "semantic"
+              }
+            },
+            "x-merge-class": "semantic"
+          },
+          "x-merge-class": "semantic"
+        }
+      }
+    }
+  }
+}
