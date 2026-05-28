@@ -1,0 +1,42 @@
+name: DCO Check
+
+on:
+  pull_request:
+    branches: ["**"]
+
+jobs:
+  dco:
+    name: Verify DCO sign-off
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check DCO sign-off on all commits
+        run: |
+          BASE=${{ github.event.pull_request.base.sha }}
+          HEAD=${{ github.event.pull_request.head.sha }}
+          MISSING=0
+
+          for COMMIT in $(git log --format="%H" "$BASE..$HEAD"); do
+            MSG=$(git log -1 --format="%B" "$COMMIT")
+            AUTHOR=$(git log -1 --format="%an <%ae>" "$COMMIT")
+            if ! echo "$MSG" | grep -qiE "^Signed-off-by:"; then
+              echo "❌ Missing DCO sign-off on commit $COMMIT ($AUTHOR)"
+              MISSING=$((MISSING + 1))
+            else
+              echo "✅ $COMMIT ($AUTHOR)"
+            fi
+          done
+
+          if [ "$MISSING" -gt 0 ]; then
+            echo ""
+            echo "ERROR: $MISSING commit(s) missing 'Signed-off-by:' trailer."
+            echo "Fix with: git rebase --signoff HEAD~$MISSING && git push --force-with-lease"
+            echo "See CONTRIBUTING.md for details."
+            exit 1
+          fi
+
+          echo ""
+          echo "All commits have DCO sign-off. ✅"
