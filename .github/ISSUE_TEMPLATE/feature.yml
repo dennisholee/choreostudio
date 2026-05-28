@@ -1,0 +1,33 @@
+name: Feature Request
+description: Propose a new feature or improvement
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please check the [PRD](../blob/main/PRD.md) and [V2 Roadmap](../blob/main/PRD.md#35-v2-roadmap) before submitting — your feature may already be planned.
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem does this solve?
+    validations:
+      required: true
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed solution
+    validations:
+      required: true
+  - type: dropdown
+    id: layer
+    attributes:
+      label: Which product layer does this affect?
+      options:
+        - Layer 1 — Business Domain (canvas)
+        - Layer 2 — Technical Orchestration (saga/state machine)
+        - Layer 3 — Integration & Contracts (OpenAPI/AsyncAPI)
+        - Cross-cutting (auth, persistence, collaboration)
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Draft acceptance criteria (Given/When/Then)

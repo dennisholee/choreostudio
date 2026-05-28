@@ -1,0 +1,11 @@
+# Global owners — required reviewer on all PRs
+* @dennisholee
+
+# Product artefacts — PM/architect sign-off required
+/PRD.md @dennisholee
+/ADRs.md @dennisholee
+/ACCEPTANCE_CRITERIA.md @dennisholee
+/SPIKE_BRIEFS.md @dennisholee
+
+# GitHub configuration — admin sign-off required
+/.github/ @dennisholee

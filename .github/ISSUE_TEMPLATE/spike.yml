@@ -1,0 +1,42 @@
+name: Spike Brief
+description: Time-boxed technical investigation with a Go/No-Go outcome
+labels: ["spike"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Spikes must produce a Go/No-Go recommendation within the stated duration. See [SPIKE_BRIEFS.md](../blob/main/SPIKE_BRIEFS.md) for examples.
+  - type: textarea
+    id: objective
+    attributes:
+      label: Objective
+      description: What risk does this spike de-risk?
+    validations:
+      required: true
+  - type: input
+    id: duration
+    attributes:
+      label: Duration (e.g. "1 week")
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: Scope
+      description: What will be built or evaluated?
+    validations:
+      required: true
+  - type: textarea
+    id: deliverables
+    attributes:
+      label: Deliverables (checklist)
+      placeholder: |
+        - [ ] Prototype
+        - [ ] Benchmark report
+        - [ ] Go/No-Go recommendation
+  - type: textarea
+    id: gonogo
+    attributes:
+      label: Go / No-Go criteria
+    validations:
+      required: true
