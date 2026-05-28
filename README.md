@@ -44,6 +44,14 @@ Pre-development. All product, architecture, and delivery artefacts are complete:
 
 Next step: run [Spike A](SPIKE_BRIEFS.md#spike-a-crdt-library-selection--invariant-test-harness) and [Spike B](SPIKE_BRIEFS.md#spike-b-incremental-compilation-proof-of-concept) in parallel before Milestone 1 begins.
 
+## Developer documentation
+
+Start here if you are contributing to the architecture, canvas model, or delivery process:
+
+- [Architecture guide](docs/architecture.md)
+- [Canvas elements reference](docs/canvas-elements.md)
+- [Spike workflow](docs/spike-workflow.md)
+
 ## Milestones
 
 | Milestone | Weeks | Theme |
