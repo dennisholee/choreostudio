@@ -1,14 +1,15 @@
 import Ajv from 'ajv';
 import addFormats from 'ajv-formats';
-import { readFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { createRequire } from 'node:module';
+
+const CANVAS_SCHEMA_VERSION = '0.1.0';
+const require = createRequire(import.meta.url);
+const schema = require('../../../../docs/schema/canvas.schema.json');
 
 const ajv = new Ajv({ allErrors: true });
+ajv.addVocabulary(['version', 'x-merge-class']);
 addFormats(ajv);
 
-const schemaPath = join(dirname(fileURLToPath(import.meta.url)), '../../../../docs/schema/canvas.schema.json');
-const schema = JSON.parse(readFileSync(schemaPath, 'utf-8'));
 const validate = ajv.compile(schema);
 
 export interface ValidationResult {
@@ -16,11 +17,22 @@ export interface ValidationResult {
   errors: string[];
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
+}
+
 export function validateCanvas(doc: unknown): ValidationResult {
-  const valid = validate(doc) as boolean;
+  const versionErrors =
+    isRecord(doc) && doc.schemaVersion === CANVAS_SCHEMA_VERSION
+      ? []
+      : [`/schemaVersion must be ${CANVAS_SCHEMA_VERSION}`];
+  const schemaValid = validate(doc) as boolean;
+  const schemaErrors = schemaValid
+    ? []
+    : (validate.errors ?? []).map((error) => `${error.instancePath || '/'} ${error.message ?? ''}`.trim());
 
   return {
-    valid,
-    errors: valid ? [] : (validate.errors ?? []).map((error) => `${error.instancePath} ${error.message ?? ''}`),
+    valid: versionErrors.length === 0 && schemaValid,
+    errors: [...versionErrors, ...schemaErrors],
   };
 }
