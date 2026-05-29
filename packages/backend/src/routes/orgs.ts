@@ -3,6 +3,7 @@ import type { QueryResultRow } from 'pg';
 
 import { query } from '../db/client.js';
 import { ConflictError, NotFoundError } from '../errors.js';
+import { requireUserId } from '../lib/access.js';
 import { assertSlug, requireObject, requireString } from '../lib/request.js';
 
 interface OrgRow extends QueryResultRow {
@@ -15,6 +16,7 @@ interface OrgRow extends QueryResultRow {
 
 const orgsRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.post('/orgs', async (request, reply) => {
+    requireUserId(request);
     const body = requireObject(request.body);
     const name = requireString(body, 'name');
     const slug = requireString(body, 'slug');
@@ -32,7 +34,8 @@ const orgsRoutes: FastifyPluginAsync = async (fastify) => {
     return reply.status(201).send(result.rows[0]);
   });
 
-  fastify.get('/orgs', async () => {
+  fastify.get('/orgs', async (request) => {
+    requireUserId(request);
     const result = await query<OrgRow>(
       'SELECT id, name, slug, created_at AS "createdAt", updated_at AS "updatedAt" FROM orgs ORDER BY created_at ASC',
     );
@@ -41,6 +44,7 @@ const orgsRoutes: FastifyPluginAsync = async (fastify) => {
   });
 
   fastify.get('/orgs/:orgId', async (request) => {
+    requireUserId(request);
     const { orgId } = request.params as { orgId: string };
     const result = await query<OrgRow>(
       'SELECT id, name, slug, created_at AS "createdAt", updated_at AS "updatedAt" FROM orgs WHERE id = $1',
@@ -56,6 +60,7 @@ const orgsRoutes: FastifyPluginAsync = async (fastify) => {
   });
 
   fastify.delete('/orgs/:orgId', async (request, reply) => {
+    requireUserId(request);
     const { orgId } = request.params as { orgId: string };
     const teamCount = await query<{ count: string }>('SELECT COUNT(*)::text AS count FROM teams WHERE org_id = $1', [orgId]);
 

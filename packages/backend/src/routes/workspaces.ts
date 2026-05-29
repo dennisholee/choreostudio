@@ -33,12 +33,19 @@ const workspaceSelect = `
 
 const workspacesRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.post('/teams/:teamId/workspaces', async (request, reply) => {
+    requireUserId(request);
     const { teamId } = request.params as { teamId: string };
     const body = requireObject(request.body);
     const name = requireString(body, 'name');
     const slug = requireString(body, 'slug');
     const gitRepoUrl = optionalString(body, 'gitRepoUrl');
     assertSlug(slug);
+
+    const teamResult = await query<{ orgId: string }>('SELECT org_id AS "orgId" FROM teams WHERE id = $1', [teamId]);
+    const team = teamResult.rows[0];
+    if (!team) {
+      throw new NotFoundError('Team not found');
+    }
 
     const result = await query<WorkspaceRow>(
       `
@@ -52,12 +59,6 @@ const workspacesRoutes: FastifyPluginAsync = async (fastify) => {
     const created = result.rows[0];
     if (!created) {
       throw new NotFoundError('Workspace could not be created');
-    }
-
-    const teamResult = await query<{ orgId: string }>('SELECT org_id AS "orgId" FROM teams WHERE id = $1', [teamId]);
-    const team = teamResult.rows[0];
-    if (!team) {
-      throw new NotFoundError('Team not found');
     }
 
     return reply.status(201).send({ ...created, orgId: team.orgId });
@@ -101,18 +102,18 @@ const workspacesRoutes: FastifyPluginAsync = async (fastify) => {
     const client = await pool.connect();
     try {
       await client.query('BEGIN');
-      const deletedWorkspace = await client.query<{ id: string }>(
+      const lockedWorkspace = await client.query<{ id: string }>(
         `
-          UPDATE workspaces
-          SET deleted_at = now()
+          SELECT id
+          FROM workspaces
           WHERE id = $1
             AND deleted_at IS NULL
-          RETURNING id
+          FOR UPDATE
         `,
         [workspaceId],
       );
 
-      if (deletedWorkspace.rowCount === 0) {
+      if (lockedWorkspace.rowCount === 0) {
         throw new NotFoundError('Workspace not found');
       }
 
@@ -125,6 +126,17 @@ const workspacesRoutes: FastifyPluginAsync = async (fastify) => {
         `,
         [workspaceId],
       );
+
+      await client.query(
+        `
+          UPDATE workspaces
+          SET deleted_at = now()
+          WHERE id = $1
+            AND deleted_at IS NULL
+        `,
+        [workspaceId],
+      );
+
       await client.query('COMMIT');
     } catch (error) {
       await client.query('ROLLBACK');

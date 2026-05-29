@@ -55,7 +55,10 @@ const canvasesRoutes: FastifyPluginAsync = async (fastify) => {
     const result = await query<CanvasRow>(
       `
         INSERT INTO canvases (workspace_id, slug, name, git_branch, created_by)
-        VALUES ($1, $2, $3, $4, $5)
+        SELECT w.id, $2, $3, $4, $5
+        FROM workspaces w
+        WHERE w.id = $1
+          AND w.deleted_at IS NULL
         RETURNING id, workspace_id AS "workspaceId", slug, name, lifecycle_state AS "lifecycleState", git_branch AS "gitBranch", schema_version AS "schemaVersion", created_by AS "createdBy", created_at AS "createdAt", updated_at AS "updatedAt"
       `,
       [workspaceId, slug, name, `choreostudio/drafts/${slug}`, userId],

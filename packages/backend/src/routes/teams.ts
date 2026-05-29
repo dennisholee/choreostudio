@@ -3,6 +3,7 @@ import type { QueryResultRow } from 'pg';
 
 import { query } from '../db/client.js';
 import { ConflictError, NotFoundError } from '../errors.js';
+import { requireUserId } from '../lib/access.js';
 import { assertSlug, optionalString, requireObject, requireString } from '../lib/request.js';
 
 interface TeamRow extends QueryResultRow {
@@ -30,11 +31,17 @@ const selectTeam = `
 
 const teamsRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.post('/orgs/:orgId/teams', async (request, reply) => {
+    requireUserId(request);
     const { orgId } = request.params as { orgId: string };
     const body = requireObject(request.body);
     const name = requireString(body, 'name');
     const slug = requireString(body, 'slug');
     assertSlug(slug);
+
+    const orgResult = await query<{ id: string }>('SELECT id FROM orgs WHERE id = $1', [orgId]);
+    if (orgResult.rowCount === 0) {
+      throw new NotFoundError('Organization not found');
+    }
 
     const result = await query<TeamRow>(
       `
@@ -49,12 +56,14 @@ const teamsRoutes: FastifyPluginAsync = async (fastify) => {
   });
 
   fastify.get('/orgs/:orgId/teams', async (request) => {
+    requireUserId(request);
     const { orgId } = request.params as { orgId: string };
     const result = await query<TeamRow>(`${selectTeam} WHERE org_id = $1 ORDER BY created_at ASC`, [orgId]);
     return result.rows;
   });
 
   fastify.get('/teams/:teamId', async (request) => {
+    requireUserId(request);
     const { teamId } = request.params as { teamId: string };
     const result = await query<TeamRow>(`${selectTeam} WHERE id = $1`, [teamId]);
     const team = result.rows[0];
@@ -67,6 +76,7 @@ const teamsRoutes: FastifyPluginAsync = async (fastify) => {
   });
 
   fastify.patch('/teams/:teamId', async (request) => {
+    requireUserId(request);
     const { teamId } = request.params as { teamId: string };
     const body = requireObject(request.body);
     const name = optionalString(body, 'name');
@@ -79,6 +89,11 @@ const teamsRoutes: FastifyPluginAsync = async (fastify) => {
     }
 
     if (nextOrgId && nextOrgId !== existing.orgId) {
+      const orgResult = await query<{ id: string }>('SELECT id FROM orgs WHERE id = $1', [nextOrgId]);
+      if (orgResult.rowCount === 0) {
+        throw new NotFoundError('Organization not found');
+      }
+
       const dependencyResult = await query<TeamDependencyRow>(
         `
           SELECT
@@ -122,6 +137,7 @@ const teamsRoutes: FastifyPluginAsync = async (fastify) => {
   });
 
   fastify.delete('/teams/:teamId', async (request, reply) => {
+    requireUserId(request);
     const { teamId } = request.params as { teamId: string };
     const dependencyResult = await query<{ count: string }>(
       'SELECT COUNT(*)::text AS count FROM workspaces WHERE team_id = $1 AND deleted_at IS NULL',
