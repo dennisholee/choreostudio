@@ -174,3 +174,60 @@ Choose **schema-annotated semantic/cosmetic field separation inside one public c
 - Teams integrating against the public canvas schema may implement incompatible diff behavior, increasing ecosystem drift.
 
 ---
+
+## ADR-005: TypeScript Monorepo with React 18, Fastify, and PostgreSQL
+
+**Date**: 2026-05-29
+**Status**: Accepted
+**Deciders**: Tech Lead, Frontend Lead, Backend Lead, Platform Architect
+
+## Context
+ChoreoStudio is a SaaS web application that needs a rich interactive canvas, real-time multi-user editing, CRDT collaboration via Yjs (ADR-001), a WebSocket server for Yjs awareness and sync, REST plus WebSocket APIs for canvas operations, Git integration for canvas persistence, RBAC and SSO in M4, and shared canvas JSON schema types between frontend and backend. A stack decision is required that keeps the collaboration model native to the Yjs ecosystem while minimizing type drift across the product surface.
+
+## Decision Drivers
+- Support a rich node-edge canvas with drag-drop, zoom/pan, and custom element types
+- Keep Yjs collaboration and y-websocket integration on a first-class supported stack
+- Share canvas schema TypeScript types and validation logic between frontend and backend
+- Avoid cross-language context switching across the product team
+- Support both REST and WebSocket APIs for canvas operations and collaboration sync
+- Keep local and CI builds fast in a multi-package codebase
+- Store canvas files in Git rather than the primary application database, per ADR-002
+- Support enterprise features including RBAC, team hierarchy, and SSO sessions
+
+## Considered Options
+1. TypeScript monorepo with React 18, Fastify, PostgreSQL, and a shared package — keep the full stack in one language with shared types and monorepo task orchestration.
+2. Split-language architecture with React frontend and JVM or Go backend — optimize backend specialization at the cost of shared-type friction and extra team context switching.
+3. Full-stack framework with a single deployable app and database-centric canvas persistence — simplify initial setup but diverge from the Git-backed persistence model and Yjs WebSocket requirements.
+
+## Decision
+Choose a **TypeScript monorepo built with Turborepo, React 18 + Vite on the frontend, Node.js + Fastify on the backend, a shared `packages/shared` package, and PostgreSQL for application data**. Turborepo is selected as the monorepo tool because it caches builds and runs tasks in parallel across packages, which is well suited to a TypeScript multi-package workspace. React 18 + Vite is selected for the frontend because Yjs has first-class React integration (`y-react`), `react-flow` is the leading canvas library for node-edge diagrams, and the broader React ecosystem is the best fit for a highly interactive SaaS UI. Node.js + Fastify is selected for the backend because it keeps the server in the same language as the frontend, reduces context switching, provides native TypeScript support, and supports WebSockets through `@fastify/websocket`, which is required for Yjs `y-websocket` style sync and awareness flows. The shared package will hold canvas schema TypeScript types generated from JSON Schema, AJV validators, and shared domain constants so both runtime tiers use the same contract surface. PostgreSQL is selected for user accounts, workspace and team hierarchy, RBAC roles, and SSO sessions, while canvas files themselves remain stored in Git per ADR-002 rather than in the database. Testing will use Vitest for frontend and shared packages, `supertest` for backend API coverage, and Playwright for end-to-end coverage; linting and formatting will use ESLint and Prettier with shared configuration at the monorepo root.
+
+The package layout is:
+
+```text
+packages/
+  frontend/    React 18 + Vite + react-flow + Yjs client
+  backend/     Fastify + y-websocket + PostgreSQL (pg)
+  shared/      Canvas schema TS types + AJV validator + constants
+```
+
+## Consequences
+**Positive:**
+- Uses a single TypeScript stack across the entire product, allowing canvas schema types to be shared cleanly via `packages/shared`.
+- Aligns directly with the JavaScript/TypeScript-native Yjs ecosystem and its collaboration tooling.
+- Uses `react-flow` to reduce custom canvas rendering complexity for node-edge diagrams and custom node types.
+- Improves monorepo productivity through Turborepo parallelism and incremental build caching.
+
+**Negative / trade-offs:**
+- Node.js is single-threaded, so CPU-intensive contract generation from ADR-003 must run in a worker thread or separate compilation service.
+- PostgreSQL adds a local development and deployment dependency that must be provisioned consistently.
+- Monorepo tooling introduces workspace and task-graph complexity that the team must maintain over time.
+- React and Fastify still require deliberate boundaries so the shared package does not accumulate framework-specific coupling.
+
+**Risks if not followed:**
+- Choosing a split-language stack would increase type drift risk between canvas schema definitions, validators, and API contracts.
+- Avoiding the Yjs-native JavaScript ecosystem would increase integration cost and reduce leverage from existing collaboration libraries.
+- Building the canvas without a purpose-built node-edge library would increase rendering and interaction complexity for core product workflows.
+- Persisting canvas files in PostgreSQL instead of Git would conflict with ADR-002 and weaken the repository-centric audit model.
+
+---
