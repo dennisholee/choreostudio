@@ -1,0 +1,32 @@
+name: Schema validation
+
+on:
+  push:
+    paths:
+      - 'docs/schema/**'
+      - 'packages/shared/**'
+  pull_request:
+    paths:
+      - 'docs/schema/**'
+      - 'packages/shared/**'
+
+jobs:
+  validate-schema:
+    name: Validate canvas JSON schema
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Validate schema is valid JSON
+        run: node -e "JSON.parse(require('fs').readFileSync('docs/schema/canvas.schema.json','utf8')); console.log('Schema JSON valid')"
+
+      - name: Build shared package (includes AJV compile check)
+        run: npm run build -w packages/shared
