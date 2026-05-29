@@ -42,11 +42,8 @@ interface CanvasState {
   nodes: Node<CanvasNodeData>[];
   edges: Edge[];
   canvasDoc: CanvasDocument | null;
-  /** Internal — committed-state history stack (oldest at index 0). Do not mutate directly. */
-  _history: HistoryEntry[];
-  /** Internal — redo stack (most-recently-undone at end). Do not mutate directly. */
-  _future: HistoryEntry[];
-  /** Internal — snapshot of the most-recently-committed nodes/edges. */
+  history: HistoryEntry[];
+  future: HistoryEntry[];
   _lastCommitted: HistoryEntry;
   addElement: (type: ElementType, position: { x: number; y: number }) => void;
   updateElementLabel: (id: string, label: string) => void;
@@ -195,17 +192,29 @@ function getValidationState(nodes: Node<CanvasNodeData>[], edges: Edge[], curren
 
 const HISTORY_CAP = 100;
 
+function cloneHistoryEntry(entry: HistoryEntry): HistoryEntry {
+  return structuredClone(entry);
+}
+
+function createHistoryEntry(nodes: Node<CanvasNodeData>[], edges: Edge[]): HistoryEntry {
+  return cloneHistoryEntry({ nodes, edges });
+}
+
+function areHistoryEntriesEqual(left: HistoryEntry, right: HistoryEntry): boolean {
+  return JSON.stringify(left) === JSON.stringify(right);
+}
+
 export const useCanvasStore = create<CanvasState>((set, get) => ({
   nodes: [],
   edges: [],
   canvasDoc: null,
-  _history: [],
-  _future: [],
+  history: [],
+  future: [],
   _lastCommitted: { nodes: [], edges: [] },
   addElement: (type, position) => {
     set((state) => {
       const nodes = withSemanticWarnings([...state.nodes, createNode(type, position)], state.edges, state.canvasDoc);
-      return { ...state, nodes };
+      return { nodes };
     });
   },
   updateElementLabel: (id, label) => {
@@ -222,12 +231,11 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
           : node,
       );
 
-      return { ...state, nodes: withSemanticWarnings(nodes, state.edges, state.canvasDoc) };
+      return { nodes: withSemanticWarnings(nodes, state.edges, state.canvasDoc) };
     });
   },
   updateElementPosition: (id, position) => {
     set((state) => ({
-      ...state,
       nodes: state.nodes.map((node) => (node.id === id ? { ...node, position } : node)),
     }));
   },
@@ -289,46 +297,56 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
       return false;
     }
 
-    // Push the snapshot that was current before this commit onto the history stack.
-    // Trim to the cap so the stack never exceeds HISTORY_CAP entries.
-    const newHistory = [...state._history, state._lastCommitted].slice(-HISTORY_CAP);
+    const nextCommitted = createHistoryEntry(state.nodes, state.edges);
+    if (areHistoryEntriesEqual(nextCommitted, state._lastCommitted)) {
+      return true;
+    }
+
+    const history = [...state.history, cloneHistoryEntry(state._lastCommitted)].slice(-HISTORY_CAP);
 
     set({
       canvasDoc: toCanvasDocument(state.nodes, state.edges, state.canvasDoc),
-      _history: newHistory,
-      _future: [],
-      _lastCommitted: { nodes: state.nodes, edges: state.edges },
+      history,
+      future: [],
+      _lastCommitted: nextCommitted,
     });
     return true;
   },
   undo: () => {
     const state = get();
-    if (state._history.length === 0) return;
+    if (state.history.length === 0) return;
 
-    const history = state._history.slice();
-    const prev = history.pop()!;
+    const currentSnapshot = createHistoryEntry(state.nodes, state.edges);
+    if (!areHistoryEntriesEqual(currentSnapshot, state._lastCommitted)) {
+      return;
+    }
 
+    const history = state.history.slice();
+    const previous = history.pop()!;
     const canvasDoc =
-      prev.nodes.length === 0 && prev.edges.length === 0
+      previous.nodes.length === 0 && previous.edges.length === 0
         ? null
-        : toCanvasDocument(prev.nodes, prev.edges, state.canvasDoc);
+        : toCanvasDocument(previous.nodes, previous.edges, state.canvasDoc);
 
     set({
-      nodes: withSemanticWarnings(prev.nodes, prev.edges, canvasDoc),
-      edges: prev.edges,
+      nodes: withSemanticWarnings(previous.nodes, previous.edges, canvasDoc),
+      edges: previous.edges,
       canvasDoc,
-      _history: history,
-      _future: [...state._future, state._lastCommitted],
-      _lastCommitted: prev,
+      history,
+      future: [cloneHistoryEntry(state._lastCommitted), ...state.future],
+      _lastCommitted: cloneHistoryEntry(previous),
     });
   },
   redo: () => {
     const state = get();
-    if (state._future.length === 0) return;
+    if (state.future.length === 0) return;
 
-    const future = state._future.slice();
-    const next = future.pop()!;
+    const currentSnapshot = createHistoryEntry(state.nodes, state.edges);
+    if (!areHistoryEntriesEqual(currentSnapshot, state._lastCommitted)) {
+      return;
+    }
 
+    const [next, ...future] = state.future;
     const canvasDoc =
       next.nodes.length === 0 && next.edges.length === 0
         ? null
@@ -338,13 +356,13 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
       nodes: withSemanticWarnings(next.nodes, next.edges, canvasDoc),
       edges: next.edges,
       canvasDoc,
-      _history: [...state._history, state._lastCommitted],
-      _future: future,
-      _lastCommitted: next,
+      history: [...state.history, cloneHistoryEntry(state._lastCommitted)].slice(-HISTORY_CAP),
+      future,
+      _lastCommitted: cloneHistoryEntry(next),
     });
   },
-  canUndo: () => get()._history.length > 0,
-  canRedo: () => get()._future.length > 0,
+  canUndo: () => get().history.length > 0,
+  canRedo: () => get().future.length > 0,
   getValidationState: () => {
     const state = get();
     return getValidationState(state.nodes, state.edges, state.canvasDoc);
