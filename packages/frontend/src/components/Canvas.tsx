@@ -18,6 +18,7 @@ import { DomainEventNode } from './nodes/DomainEventNode';
 import { PolicyNode } from './nodes/PolicyNode';
 import { ReadModelNode } from './nodes/ReadModelNode';
 import { useCanvasStore, type CanvasNodeData } from '../store/canvas-store';
+import { SizeWarningBanner } from './SizeWarningBanner';
 
 const nodeTypes: NodeTypes = {
   domainEvent: DomainEventNode,
@@ -45,9 +46,10 @@ function CanvasInner() {
   const runCommitValidation = useCallback(() => {
     const committed = commitCanvas();
     const latestValidation = useCanvasStore.getState().getValidationState();
+    const firstViolation = latestValidation.structural[0];
 
-    if (!committed && latestValidation.structural.length > 0) {
-      setToastMessage(`Structural validation failed: ${latestValidation.structural[0].message}`);
+    if (!committed && firstViolation) {
+      setToastMessage(`Structural validation failed: ${firstViolation.message}`);
       return;
     }
 
@@ -152,8 +154,8 @@ function CanvasInner() {
         >
           <strong>Semantic warnings</strong>
           <ul style={{ margin: '8px 0 0', paddingLeft: 18 }}>
-            {validationState.semantic.map((warning) => (
-              <li key={warning}>{warning}</li>
+            {validationState.semantic.map((warning, index) => (
+              <li key={`${warning}-${index}`}>{warning}</li>
             ))}
           </ul>
         </div>
@@ -198,6 +200,7 @@ function CanvasInner() {
           {toastMessage}
         </div>
       ) : null}
+      <SizeWarningBanner />
       <ReactFlow
         fitView
         nodes={nodes}
