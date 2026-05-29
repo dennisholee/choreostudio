@@ -9,6 +9,11 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### M1 features
+- Validation: POST /canvases/:id/validate — 422 structural / 200 semantic per AC5
+- Canvas hierarchy: CRUD API for orgs/teams/workspaces/canvases
+- React canvas: 5 element types with commit-time structural validation
+
 ### Repo housekeeping & documentation (2026-05-29)
 - Added GitHub issue templates (bug, feature, spike) and PR template with AC checklist + DCO confirmation
 - Added CODEOWNERS, SECURITY.md vulnerability reporting policy

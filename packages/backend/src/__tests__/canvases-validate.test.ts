@@ -44,76 +44,135 @@ function createCanvas(overrides: Partial<CanvasDocument> = {}): CanvasDocument {
 }
 
 describe('validateCanvasDocument', () => {
-  it('returns success for a valid canvas', () => {
+  it('returns 200-style success for a valid canvas with no warnings', () => {
     expect(validateCanvasDocument(createCanvas())).toEqual({
       valid: true,
       warnings: [],
     });
   });
 
-  it('returns a structural 422 result for a command without an aggregate connection', () => {
-    const result = validateCanvasDocument(
-      createCanvas({
-        elements: [
-          {
-            id: 'command-1',
-            type: 'command',
-            name: 'PlaceOrder',
-            transport: 'REST',
-            position: { x: 0, y: 0 },
-          },
-        ],
-        connections: [],
-      }),
-    );
-
-    expect(result).toMatchObject({
+  it('returns a structural failure payload for a command without an aggregate connection', () => {
+    expect(
+      validateCanvasDocument(
+        createCanvas({
+          elements: [
+            {
+              id: 'command-1',
+              type: 'command',
+              name: 'PlaceOrder',
+              transport: 'REST',
+              position: { x: 0, y: 0 },
+            },
+          ],
+          connections: [],
+        }),
+      ),
+    ).toEqual({
       valid: false,
       tier: 'structural',
       code: 'structural_validation_failed',
       elementIds: ['command-1'],
+      message: 'Command "PlaceOrder" must be connected to an Aggregate or Policy.',
     });
   });
 
-  it('returns semantic warnings for a cycle hint', () => {
-    const result = validateCanvasDocument(
-      createCanvas({
-        elements: [
-          {
-            id: 'event-1',
-            type: 'domainEvent',
-            name: 'OrderPlaced',
-            position: { x: 0, y: 0 },
-          },
-          {
-            id: 'policy-1',
-            type: 'policy',
-            name: 'ReserveInventory',
-            position: { x: 100, y: 0 },
-          },
-        ],
-        connections: [
-          {
-            id: 'connection-1',
-            sourceId: 'event-1',
-            targetId: 'policy-1',
-            direction: 'sourceToTarget',
-          },
-          {
-            id: 'connection-2',
-            sourceId: 'policy-1',
-            targetId: 'event-1',
-            direction: 'sourceToTarget',
-          },
-        ],
-      }),
-    );
+  it('returns semantic warnings for a cycle hint while keeping the canvas valid', () => {
+    expect(
+      validateCanvasDocument(
+        createCanvas({
+          elements: [
+            {
+              id: 'event-1',
+              type: 'domainEvent',
+              name: 'OrderPlaced',
+              position: { x: 0, y: 0 },
+            },
+            {
+              id: 'policy-1',
+              type: 'policy',
+              name: 'ReserveInventory',
+              position: { x: 100, y: 0 },
+            },
+          ],
+          connections: [
+            {
+              id: 'connection-1',
+              sourceId: 'event-1',
+              targetId: 'policy-1',
+              direction: 'sourceToTarget',
+            },
+            {
+              id: 'connection-2',
+              sourceId: 'policy-1',
+              targetId: 'event-1',
+              direction: 'sourceToTarget',
+            },
+          ],
+        }),
+      ),
+    ).toEqual({
+      valid: true,
+      warnings: ['Cycle hint detected: event-1 -> policy-1 -> event-1'],
+    });
+  });
 
-    expect(result.valid).toBe(true);
-    if (!result.valid) {
-      throw new Error('Expected semantic warning result');
-    }
+  it('returns the invalid schema structural failure payload for malformed canvas payloads', () => {
+    expect(validateCanvasDocument({})).toMatchObject({
+      valid: false,
+      tier: 'structural',
+      code: 'invalid_canvas_schema',
+      elementIds: [],
+      message: expect.stringContaining('/schemaVersion must be 0.1.0'),
+    });
+  });
 
-    expect(result.warnings).toEqual(['Cycle hint detected: event-1 -> policy-1 -> event-1']);
+  it('prioritizes structural failures over semantic warnings', () => {
+    expect(
+      validateCanvasDocument(
+        createCanvas({
+          elements: [
+            {
+              id: 'command-1',
+              type: 'command',
+              name: 'PlaceOrder',
+              transport: 'REST',
+              position: { x: 0, y: 0 },
+            },
+            {
+              id: 'event-1',
+              type: 'domainEvent',
+              name: 'OrderPlaced',
+              position: { x: 100, y: 0 },
+            },
+            {
+              id: 'policy-1',
+              type: 'policy',
+              name: 'ReserveInventory',
+              position: { x: 200, y: 0 },
+            },
+          ],
+          connections: [
+            {
+              id: 'connection-1',
+              sourceId: 'event-1',
+              targetId: 'policy-1',
+              direction: 'sourceToTarget',
+            },
+            {
+              id: 'connection-2',
+              sourceId: 'policy-1',
+              targetId: 'event-1',
+              direction: 'sourceToTarget',
+            },
+          ],
+        }),
+      ),
+    ).toEqual({
+      valid: false,
+      tier: 'structural',
+      code: 'structural_validation_failed',
+      elementIds: ['command-1'],
+      message: 'Command "PlaceOrder" must be connected to an Aggregate or Policy.',
+    });
   });
 });
