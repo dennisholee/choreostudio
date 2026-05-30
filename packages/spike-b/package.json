@@ -1,0 +1,18 @@
+{
+  "name": "@choreostudio/spike-b",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Spike B: Incremental compilation PoC",
+  "type": "module",
+  "scripts": { "test": "vitest run" },
+  "dependencies": {
+    "openapi3-ts": "^4.3.2",
+    "js-yaml": "^4.1.0",
+    "crypto": "^1.0.1"
+  },
+  "devDependencies": {
+    "vitest": "^1.6.0",
+    "typescript": "^5.4.0",
+    "@types/js-yaml": "^4.0.9"
+  }
+}
