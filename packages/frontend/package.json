@@ -12,7 +12,7 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
-    "@choreostudio/shared": "workspace:*",
+    "@choreostudio/shared": "*",
     "react": "^18.3.0",
     "react-dom": "^18.3.0",
     "reactflow": "^11.11.0",
