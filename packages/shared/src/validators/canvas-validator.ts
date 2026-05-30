@@ -1,5 +1,4 @@
 import Ajv from 'ajv';
-import addFormats from 'ajv-formats';
 import { createRequire } from 'node:module';
 
 const CANVAS_SCHEMA_VERSION = '0.1.0';
@@ -8,10 +7,6 @@ const schema = require('../../../../docs/schema/canvas.schema.json');
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const ajv = new (Ajv as any)({ allErrors: true, strict: false });
-// ajv-formats v3 ships its own ajv types; cast to satisfy the type checker
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-addFormats(ajv as any);
-
 const validate = ajv.compile(schema);
 
 export interface ValidationResult {
