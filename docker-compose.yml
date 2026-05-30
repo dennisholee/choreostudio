@@ -1,17 +1,6 @@
 version: "3.9"
 
 services:
-  devcontainer:
-    image: mcr.microsoft.com/devcontainers/typescript-node:20
-    restart: unless-stopped
-    working_dir: /workspaces/choreostudio
-    volumes:
-      - .:/workspaces/choreostudio
-    command: sleep infinity
-    depends_on:
-      postgres:
-        condition: service_healthy
-
   postgres:
     image: postgres:16-alpine
     restart: unless-stopped
@@ -44,11 +33,10 @@ services:
       NODE_ENV: development
     volumes:
       - .:/app
-      - /app/node_modules
+      - backend_nm:/app/node_modules
     depends_on:
       postgres:
         condition: service_healthy
-    command: npm run dev -w packages/backend
 
   frontend:
     build:
@@ -62,8 +50,11 @@ services:
       VITE_WS_URL: ws://localhost:4000/ws
     volumes:
       - .:/app
-      - /app/node_modules
-    command: npm run dev -w packages/frontend
+      - frontend_nm:/app/node_modules
+    depends_on:
+      - backend
 
 volumes:
   postgres_data:
+  backend_nm:
+  frontend_nm:
