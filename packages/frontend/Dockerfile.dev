@@ -8,5 +8,6 @@ COPY packages/spike-a/package.json ./packages/spike-a/
 COPY packages/spike-b/package.json ./packages/spike-b/
 RUN npm install --ignore-scripts
 COPY . .
+RUN npm run build -w packages/shared
 EXPOSE 3000
 CMD ["npm", "run", "dev", "-w", "packages/frontend"]
