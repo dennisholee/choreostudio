@@ -6,8 +6,8 @@ const CANVAS_SCHEMA_VERSION = '0.1.0';
 const require = createRequire(import.meta.url);
 const schema = require('../../../../docs/schema/canvas.schema.json');
 
-// strict: false ignores unknown keywords (version, x-merge-class) without addVocabulary
-const ajv = new Ajv({ allErrors: true, strict: false });
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const ajv = new (Ajv as any)({ allErrors: true, strict: false });
 // ajv-formats v3 ships its own ajv types; cast to satisfy the type checker
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 addFormats(ajv as any);
