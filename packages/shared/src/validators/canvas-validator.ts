@@ -8,7 +8,9 @@ const schema = require('../../../../docs/schema/canvas.schema.json');
 
 const ajv = new Ajv({ allErrors: true });
 ajv.addVocabulary(['version', 'x-merge-class']);
-addFormats(ajv);
+// ajv-formats v3 ships its own ajv types; cast to satisfy the type checker
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+addFormats(ajv as any);
 
 const validate = ajv.compile(schema);
 
@@ -29,7 +31,8 @@ export function validateCanvas(doc: unknown): ValidationResult {
   const schemaValid = validate(doc) as boolean;
   const schemaErrors = schemaValid
     ? []
-    : (validate.errors ?? []).map((error) => `${error.instancePath || '/'} ${error.message ?? ''}`.trim());
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    : (validate.errors ?? []).map((error: any) => `${error.instancePath || '/'} ${error.message ?? ''}`.trim());
 
   return {
     valid: versionErrors.length === 0 && schemaValid,
