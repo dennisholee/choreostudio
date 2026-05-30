@@ -4,9 +4,15 @@ import Fastify, { type FastifyInstance } from 'fastify';
 import { fileURLToPath } from 'node:url';
 
 import errorHandlerPlugin from './plugins/error-handler.js';
+import annotationsRoutes from './routes/annotations.js';
+import authRoutes from './routes/auth.js';
 import canvasesRoutes from './routes/canvases.js';
+import { lifecycleRoutes } from './routes/canvas-features.js';
+import collabRoutes from './routes/collab.js';
+import importRoutes from './routes/import.js';
 import orgsRoutes from './routes/orgs.js';
 import teamsRoutes from './routes/teams.js';
+import telemetryRoutes from './routes/telemetry.js';
 import workspacesRoutes from './routes/workspaces.js';
 
 export async function buildServer(): Promise<FastifyInstance> {
@@ -18,21 +24,23 @@ export async function buildServer(): Promise<FastifyInstance> {
 
   server.get('/health', async () => ({ status: 'ok', version: '0.0.1' }));
 
-  server.get('/ws', { websocket: true }, (socket) => {
-    socket.on('message', (message) => {
-      server.log.info({ msg: message.toString() }, 'ws message');
-    });
-  });
-
   await server.register(
     async (api) => {
       await api.register(orgsRoutes);
       await api.register(teamsRoutes);
       await api.register(workspacesRoutes);
       await api.register(canvasesRoutes);
+      await api.register(lifecycleRoutes);
+      await api.register(annotationsRoutes);
+      await api.register(importRoutes);
+      await api.register(telemetryRoutes);
+      await api.register(authRoutes);
     },
     { prefix: '/api/v1' },
   );
+
+  // WebSocket CRDT collaboration (canvas rooms via y-websocket)
+  await server.register(collabRoutes, { prefix: '/api/v1' });
 
   return server;
 }
