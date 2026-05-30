@@ -1,9 +1,7 @@
 import Ajv from 'ajv';
-import { createRequire } from 'node:module';
+import schema from '../schema/canvas.schema.json';
 
 const CANVAS_SCHEMA_VERSION = '0.1.0';
-const require = createRequire(import.meta.url);
-const schema = require('../../../../docs/schema/canvas.schema.json');
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const ajv = new (Ajv as any)({ allErrors: true, strict: false });
